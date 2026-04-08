@@ -15,14 +15,17 @@ bool CheckIfLineIsInFile(std::string filename, std::string targetline);
 bool CheckIfLineIsInVector(std::vector<std::string>& vec, const std::string& target, bool pop = false);
 bool CheckIfStringAInB(std::string A, std::string B);
 std::vector<std::string> TurnFileIntoVector(std::string FilePath, int expectedLinesAmount = 1000);
+void SaveVectorToFile(std::vector<std::string>& v, std::ofstream& file);
+
 
 std::vector<std::string> FileBData = std::vector<std::string>();
 
 int main()
 {
     const std::string outFolderPath = "out";
-    const std::string outMissingFilePath = outFolderPath + "\\Missing.txt";
-    const std::string outMathcingFilePath = outFolderPath + "\\Mathcing.txt";
+    const std::string outInANotBFilePath = outFolderPath + "\\InANotB.txt";
+    const std::string outInBNotAFilePath = outFolderPath + "\\InBNotA.txt";
+    const std::string outInAInBFilePath = outFolderPath + "\\InAInB.txt";
 
 
 
@@ -51,32 +54,41 @@ int main()
     if (!std::filesystem::exists(outFolderPath)) {
         std::filesystem::create_directory(outFolderPath);
     }
-    if (!std::filesystem::exists(outMissingFilePath)) {
-        std::ofstream outMissingFileCreation(outMissingFilePath);
-        outMissingFileCreation.close();
+    if (!std::filesystem::exists(outInANotBFilePath)) {
+        std::ofstream outInANotBFileCreation(outInANotBFilePath);
+        outInANotBFileCreation.close();
     }
-    if (!std::filesystem::exists(outMathcingFilePath)) {
-        std::ofstream outMatchingFileCreation(outMathcingFilePath);
-        outMatchingFileCreation.close();
+    if (!std::filesystem::exists(outInBNotAFilePath)) {
+        std::ofstream outInBNotAFileCreation(outInBNotAFilePath);
+        outInBNotAFileCreation.close();
+    }
+    if (!std::filesystem::exists(outInAInBFilePath)) {
+        std::ofstream outInAInBFileCreation(outInAInBFilePath);
+        outInAInBFileCreation.close();
     }
 
 
 
     std::ifstream firstFile(firstFilePath);
-    std::ofstream missingFile(outMissingFilePath, std::ios::trunc);
-    std::ofstream matchingFile(outMathcingFilePath, std::ios::trunc);
+    std::ofstream InANotBFile(outInANotBFilePath, std::ios::trunc);
+    std::ofstream InBNotAFile(outInBNotAFilePath, std::ios::trunc);
+    std::ofstream InAInBFile(outInAInBFilePath, std::ios::trunc);
 
 
     if (!firstFile.is_open()) {
         std::cerr << "ERROR while opening first file" << std::endl;
         return 1;
     }
-    if (!missingFile.is_open()) {
-        std::cerr << "ERROR while opening out missing file" << std::endl;
+    if (!InANotBFile.is_open()) {
+        std::cerr << "ERROR while opening out InANotB file" << std::endl;
         return 1;
     }
-    if (!matchingFile.is_open()) {
-        std::cerr << "ERROR while opening out matching file" << std::endl;
+    if (!InBNotAFile.is_open()) {
+        std::cerr << "ERROR while opening out InBNotA file" << std::endl;
+        return 1;
+    }
+    if (!InAInBFile.is_open()) {
+        std::cerr << "ERROR while opening out InAInB file" << std::endl;
         return 1;
     }
 
@@ -92,7 +104,7 @@ int main()
     std::string firstFileLine = "";
     int totalOperations = 0;
     int mathchingLinesCount = 0;
-    int missingLinesCount = 0;
+    int InANotBLinesCount = 0;
     while (std::getline(firstFile, firstFileLine)) {
         // For TTRP
          if (TTRP_CHECK && !CheckIfStringAInB("https:", firstFileLine)) continue;
@@ -104,20 +116,26 @@ int main()
         {
             mathchingLinesCount++;
 
-            matchingFile << firstFileLine << std::endl;
+            InAInBFile << firstFileLine << std::endl;
         }
         else {
-            missingLinesCount++;
+            InANotBLinesCount++;
 
-            missingFile << firstFileLine << std::endl;
+            InANotBFile << firstFileLine << std::endl;
         }
 
         std::cout << "Total: " << totalOperations << ", "
-            << "Matching: " << mathchingLinesCount << ", "
-            << "Missing: " << missingLinesCount << ".\r";
+            << "InAInB: " << mathchingLinesCount << ", "
+            << "InANotB: " << InANotBLinesCount << ".\r";
         std::cout.flush();
     }
+    if (POP_FROM_VECTOR) {
+        SaveVectorToFile(FileBData, InBNotAFile);
+    }
     firstFile.close();
+    InAInBFile.close();
+    InANotBFile.close();
+    InBNotAFile.close();
 
     std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
     std::chrono::milliseconds functionTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -130,8 +148,8 @@ int main()
     functionTimeInt -= seconds * 1000;
 
     std::cout << "Total: " << totalOperations << ", "
-        << "Matching: " << mathchingLinesCount << ", "
-        << "Missing: " << missingLinesCount << "." << std::endl;
+        << "InAInB: " << mathchingLinesCount << ", "
+        << "InANotB: " << InANotBLinesCount << "." << std::endl;
     std::cout << "Time: " << hours << "h "
         << minutes << "m "
         << seconds << "s "
@@ -225,4 +243,12 @@ std::vector<std::string> TurnFileIntoVector(std::string FilePath, int expectedLi
 
     std::sort(resultVector.begin(), resultVector.end());
     return resultVector;
+}
+
+
+void SaveVectorToFile(std::vector<std::string> &v, std::ofstream &file)
+{
+    for (std::string value : v) {
+        file << value << std::endl;
+    }
 }
