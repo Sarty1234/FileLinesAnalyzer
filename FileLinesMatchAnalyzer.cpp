@@ -11,9 +11,10 @@ const bool TTRP_CHECK = true;
 const bool POP_FROM_VECTOR = true;
 
 
-bool CheckIfLineIsInFile(std::string filename, std::string targetline);
+//bool CheckIfLineIsInFile(std::string filename, std::string targetline);
 bool CheckIfLineIsInVector(std::vector<std::string>& vec, const std::string& target, bool pop = false);
 bool CheckIfStringAInB(std::string A, std::string B);
+std::string ExtrachHttpLinkFromLine(const std::string& line);
 std::vector<std::string> TurnFileIntoVector(std::string FilePath, int expectedLinesAmount = 1000);
 void SaveVectorToFile(std::vector<std::string>& v, std::ofstream& file);
 
@@ -26,6 +27,7 @@ int main()
     const std::string outInANotBFilePath = outFolderPath + "\\InANotB.txt";
     const std::string outInBNotAFilePath = outFolderPath + "\\InBNotA.txt";
     const std::string outInAInBFilePath = outFolderPath + "\\InAInB.txt";
+    const std::string outInAOrInBFilePath = outFolderPath + "\\InAOrInB.txt";
 
 
 
@@ -66,6 +68,10 @@ int main()
         std::ofstream outInAInBFileCreation(outInAInBFilePath);
         outInAInBFileCreation.close();
     }
+    if (!std::filesystem::exists(outInAOrInBFilePath)) {
+        std::ofstream outInAOrInBFileCreation(outInAOrInBFilePath);
+        outInAOrInBFileCreation.close();
+    }
 
 
 
@@ -73,6 +79,7 @@ int main()
     std::ofstream InANotBFile(outInANotBFilePath, std::ios::trunc);
     std::ofstream InBNotAFile(outInBNotAFilePath, std::ios::trunc);
     std::ofstream InAInBFile(outInAInBFilePath, std::ios::trunc);
+    std::ofstream InAOrInBFile(outInAOrInBFilePath, std::ios::trunc);
 
 
     if (!firstFile.is_open()) {
@@ -91,10 +98,14 @@ int main()
         std::cerr << "ERROR while opening out InAInB file" << std::endl;
         return 1;
     }
+    if (!InAOrInBFile.is_open()) {
+        std::cerr << "ERROR while opening out InAOrInB file" << std::endl;
+        return 1;
+    }
 
 
     FileBData = TurnFileIntoVector(secondFilePath, expectedLinesInFileB);
-
+    SaveVectorToFile(FileBData, InAOrInBFile);
 
 
 
@@ -107,8 +118,11 @@ int main()
     int InANotBLinesCount = 0;
     while (std::getline(firstFile, firstFileLine)) {
         // For TTRP
-         if (TTRP_CHECK && !CheckIfStringAInB("https:", firstFileLine)) continue;
-
+        //if (TTRP_CHECK && !CheckIfStringAInB("https:", firstFileLine)) continue;
+        if (TTRP_CHECK) {
+            firstFileLine = ExtrachHttpLinkFromLine(firstFileLine);
+            if (firstFileLine == "") continue;
+        }
 
 
         totalOperations++;
@@ -122,6 +136,7 @@ int main()
             InANotBLinesCount++;
 
             InANotBFile << firstFileLine << std::endl;
+            InAOrInBFile << firstFileLine << std::endl;
         }
 
         std::cout << "Total: " << totalOperations << ", "
@@ -134,6 +149,7 @@ int main()
     }
     firstFile.close();
     InAInBFile.close();
+    InAOrInBFile.close();
     InANotBFile.close();
     InBNotAFile.close();
 
@@ -163,31 +179,39 @@ int main()
 }
 
 
-bool CheckIfLineIsInFile(std::string filename, std::string targetline) 
-{
-    std::ifstream file(filename);
-
-
-    if (!file.is_open()) {
-        std::cerr << "ERROR while opening first file" << std::endl;
-        return false;
-    }
-
-
-    std::string openedFileLine = "";
-    while (std::getline(file, openedFileLine)) {
-        // For TTRP
-        if (TTRP_CHECK && !CheckIfStringAInB("https:", openedFileLine)) continue;
-
-        if (targetline == openedFileLine) {
-            file.close();
-            return true;
-        }
-    }
-
-    file.close();
-    return false;
-}
+//bool CheckIfLineIsInFile(std::string filename, std::string targetline) 
+//{
+//    std::ifstream file(filename);
+//
+//
+//    if (!file.is_open()) {
+//        std::cerr << "ERROR while opening first file" << std::endl;
+//        return false;
+//    }
+//
+//
+//    std::string openedFileLine = "";
+//    while (std::getline(file, openedFileLine)) {
+//        // For TTRP
+//        if (TTRP_CHECK && !CheckIfStringAInB("https:", openedFileLine)) continue;
+//
+//
+//        if (TTRP_CHECK && CheckIfStringAInB(targetline.substr(6, 61), openedFileLine)) {
+//            return true;
+//        }
+//
+//
+//
+//
+//        if (targetline == openedFileLine) {
+//            file.close();
+//            return true;
+//        }
+//    }
+//
+//    file.close();
+//    return false;
+//}
 
 
 
@@ -218,6 +242,22 @@ bool CheckIfStringAInB(std::string A, std::string B)
 }
 
 
+std::string ExtrachHttpLinkFromLine(const std::string& line) {
+    size_t start = line.find("https://");
+    if (start == std::string::npos) {
+        return "";
+    }
+
+    size_t end = line.find_first_of(" \t\r\n", start);
+
+    if (end == std::string::npos) {
+        return line.substr(start);
+    }
+
+    return line.substr(start, end - start);
+}
+
+
 std::vector<std::string> TurnFileIntoVector(std::string FilePath, int expectedLinesAmount) {
     std::ifstream file(FilePath);
     std::vector<std::string> resultVector = std::vector<std::string>();
@@ -233,7 +273,11 @@ std::vector<std::string> TurnFileIntoVector(std::string FilePath, int expectedLi
     std::string openedFileLine = "";
     while (std::getline(file, openedFileLine)) {
         // For TTRP
-        if (TTRP_CHECK && !CheckIfStringAInB("https:", openedFileLine)) continue;
+        //if (TTRP_CHECK && !CheckIfStringAInB("https:", openedFileLine)) continue;
+        if (TTRP_CHECK) {
+            openedFileLine = ExtrachHttpLinkFromLine(openedFileLine);
+            if (openedFileLine == "") continue;
+        }
 
         resultVector.push_back(std::move(openedFileLine));
         // move передає право власності поінтера
